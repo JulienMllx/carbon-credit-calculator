@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UgoWork — Carbon Credit Calculator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── UgoWork official palette ── */
+      --uw-bg-main:        #121212;
+      --uw-bg-secondary:   #2e2e2e;
+      --uw-primary:        #00A550;
+      --uw-primary-subtle: #52C98C;
+      --uw-primary-dark:   #004220;
+      --uw-important:      #DCE614;
+      --uw-important-sub:  #EAF072;
+      --uw-important-dark: #585C08;
+      --uw-info:           #00B2FF;
+      --uw-info-subtle:    #66D1FF;
+      --uw-warning:        #FFA800;
+      --uw-warning-subtle: #FFCB66;
+      --uw-body:           #FFFFFF;
+      --uw-body-secondary: #B8B8B8;
+      --uw-body-tertiary:  #888888;
+      --uw-neutral:        #9A9A9A;
+      --uw-neutral-dark:   #363636;
+
+      /* ── Semantic aliases ── */
+      --accent:       var(--uw-primary);
+      --accent-dim:   rgba(0, 165, 80, 0.12);
+      --accent-border:rgba(0, 165, 80, 0.30);
+      --highlight:    var(--uw-important);
+      --surface:      var(--uw-bg-secondary);
+      --surface-dim:  rgba(46,46,46,0.7);
+      --border:       rgba(255,255,255,0.08);
+      --text:         var(--uw-body);
+      --muted:        var(--uw-body-tertiary);
+      --mono: 'DM Mono', 'Courier New', monospace;
+      --sans: 'DM Sans', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--uw-bg-main);
+      min-height: 100vh;
+      font-family: var(--mono);
+      color: var(--text);
+      padding: 2rem 1rem 4rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Subtle grid pattern */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,165,80,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,165,80,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    .wrapper { max-width: 1020px; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* ── Logo ── */
+    .logo-wrap { display:flex; justify-content:center; margin-bottom:12px; }
+    .logo-svg  { display:flex; justify-content:center; } .logo-svg svg { height:56px; width:auto; }
+
+    /* ── Lang switcher ── */
+    .lang-bar { display:flex; justify-content:flex-end; margin-bottom:1.2rem; gap:6px; }
+    .lang-btn {
+      padding: 4px 12px; border-radius: 4px; font-size: 11px; font-family: var(--mono);
+      cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s;
+      border: 1px solid rgba(255,255,255,0.10); background: transparent; color: var(--muted);
+    }
+    .lang-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+    /* ── Header ── */
+    .header { text-align:center; margin-bottom: 2.5rem; }
+    .badge {
+      display: inline-block;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-border);
+      border-radius: 4px; padding: 4px 14px;
+      font-size: 10px; letter-spacing: 0.2em;
+      color: var(--accent); margin-bottom: 16px; text-transform: uppercase;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800; letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+    .subtitle { color: var(--muted); margin-top: 8px; font-size: 13px; }
+
+    /* ── Layout ── */
+    .main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start; }
+    @media (max-width: 740px) { .main-grid { grid-template-columns: 1fr; } }
+    .top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    @media (max-width: 520px) { .top-row { grid-template-columns: 1fr; } }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-label {
+      font-size: 10px; letter-spacing: 0.15em; color: var(--uw-body-tertiary);
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+
+    /* ── Program buttons ── */
+    .program-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .prog-btn {
+      padding: 10px; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03); color: var(--uw-body-secondary);
+      cursor: pointer; font-family: var(--mono); transition: all 0.2s; text-align: center;
+    }
+    .prog-btn.active {
+      border-color: var(--accent); border-width: 1.5px;
+      background: var(--accent-dim); color: var(--accent);
+    }
+    .prog-btn .btn-title { font-weight: 700; font-size: 15px; }
+    .prog-btn .btn-sub { font-size: 10px; opacity: 0.65; margin-top: 2px; }
+
+    /* ── Select ── */
+    select {
+      width: 100%; padding: 10px 32px 10px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px; color: var(--text); font-size: 13px;
+      font-family: var(--mono); cursor: pointer; outline: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300A550' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    select:focus { border-color: var(--accent-border); outline: none; }
+    select option { background: var(--uw-bg-secondary); }
+
+    /* ── Fleet table ── */
+    .fleet-table-head {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 28px;
+      gap: 8px; padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .fleet-table-head > div { text-align: center; }
+    .fleet-table-head > div:first-child { text-align: left; }
+    .fleet-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 28px;
+      gap: 8px; align-items: center; padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      animation: fadeIn 0.22s ease;
+    }
+    .fleet-row:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+
+    .type-info .type-name { font-size: 12px; font-weight: 600; color: var(--uw-body); }
+    .type-info .type-duty { font-size: 10px; margin-top: 2px; }
+    .type-info .type-ref  { font-size: 10px; color: var(--uw-body-tertiary); margin-top: 1px; }
+
+    .fleet-input {
+      width: 100%; padding: 7px 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 5px; color: var(--text); font-size: 13px;
+      font-family: var(--mono); outline: none; text-align: right; transition: border-color 0.2s;
+    }
+    .fleet-input:focus { border-color: var(--accent-border); }
+
+    .input-wrap { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+    .input-unit { font-size: 9px; color: var(--muted); text-align: center; letter-spacing: 0.05em; }
+
+    .kwh-cell { font-size: 12px; color: var(--accent); text-align: center; font-weight: 600; }
+
+    .remove-btn {
+      width: 28px; height: 28px; border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: var(--uw-neutral);
+      cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .remove-btn:hover {
+      background: rgba(255,0,0,0.10);
+      border-color: rgba(255,0,0,0.30);
+      color: #FF6666;
+    }
+
+    .add-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 14px; }
+    .add-btn {
+      padding: 10px 16px; border-radius: 6px;
+      border: 1px solid var(--accent-border);
+      background: var(--accent-dim); color: var(--accent);
+      cursor: pointer; font-family: var(--mono); font-size: 12px;
+      white-space: nowrap; transition: all 0.2s; font-weight: 600;
+    }
+    .add-btn:hover { background: rgba(0,165,80,0.20); border-color: var(--accent); }
+
+    .empty-fleet { text-align:center; padding:28px; color:var(--muted); font-size:12px; }
+    .empty-fleet .ico { display:flex; justify-content:center; margin-bottom:12px; opacity:.55; }
+
+    /* ── Result card ── */
+    .result-card {
+      background: linear-gradient(135deg, rgba(0,165,80,0.10) 0%, rgba(0,66,32,0.20) 100%);
+      border: 1px solid var(--accent-border);
+      border-radius: 10px; padding: 1.5rem; text-align: center;
+      position: relative; overflow: hidden; margin-bottom: 1rem;
+    }
+    .result-card::before {
+      content: ''; position: absolute; top:0; left:0; right:0; height:2px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--uw-important), transparent);
+    }
+    .result-tag {
+      font-size:10px; letter-spacing:.15em; color:var(--accent);
+      text-transform:uppercase; margin-bottom:10px;
+    }
+    .result-number {
+      font-family:var(--sans); font-size:clamp(2.2rem,5vw,3.2rem);
+      font-weight:800; color:var(--uw-body); line-height:1;
+    }
+    .result-unit { font-size:12px; color:var(--muted); margin-top:6px; }
+    .result-divider { margin-top:20px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.08); }
+    .revenue-tag {
+      font-size:10px; letter-spacing:.1em; color:var(--uw-body-secondary);
+      text-transform:uppercase; margin-bottom:6px;
+    }
+    .revenue-number {
+      font-family:var(--sans); font-size:1.7rem; font-weight:700;
+      color:var(--uw-important);
+    }
+    .revenue-unit { font-size:13px; font-weight:400; color:var(--muted); margin-left:3px; }
+
+    /* ── Detail rows ── */
+    .detail-row {
+      display:flex; justify-content:space-between; font-size:11px; padding:7px 0;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+    }
+    .detail-row:last-child { border-bottom:none; }
+    .dl { color:var(--muted); }
+    .dv { color:var(--uw-body); }
+    .dv.accent { color:var(--accent); font-weight:600; }
+
+    .breakdown-row {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:11px; padding:6px 0;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+    }
+    .breakdown-row:last-child { border-bottom:none; }
+
+    /* ── Source tags ── */
+    .source-tag {
+      display:inline-block; font-size:9px; padding:1px 6px; border-radius:3px;
+      margin-left:5px; vertical-align:middle; letter-spacing:0.05em;
+    }
+    .src-db  {
+      background: rgba(0,178,255,0.12); color: var(--uw-info);
+      border: 1px solid rgba(0,178,255,0.25);
+    }
+    .src-ref {
+      background: rgba(220,230,20,0.10); color: var(--uw-important);
+      border: 1px solid rgba(220,230,20,0.25);
+    }
+
+    /* ── Duty color classes ── */
+    .duty-heavy { color: var(--uw-warning); }
+    .duty-light { color: var(--uw-primary-subtle); }
+
+    /* ── Legend ── */
+    .legend { display:flex; gap:14px; font-size:10px; color:var(--muted); margin-top:10px; flex-wrap:wrap; }
+
+    /* ── kWh summary rows ── */
+    .sum-row {
+      display:flex; justify-content:space-between;
+      padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px;
+    }
+    .sum-row:last-of-type { border-bottom: none; }
+    .sum-total {
+      display:flex; justify-content:space-between;
+      padding:8px 0 0; font-size:13px; font-weight:700;
+      border-top: 1px solid rgba(255,255,255,0.08); margin-top: 4px;
+    }
+
+    /* ── Warning ── */
+    .warning {
+      padding:10px 14px;
+      background: rgba(255,168,0,0.06);
+      border: 1px solid rgba(255,168,0,0.20);
+      border-radius:6px; font-size:10px; color:var(--uw-warning-subtle); line-height:1.5;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { opacity:.4; }
+    .ctx-label { font-size:9px; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin-bottom:2px; }
+    .fleet-table-head.ctx, .fleet-row.ctx { grid-template-columns: 2fr 1fr 1fr 1fr 1fr 28px; }
+    .ctx-select { width:100%; background:var(--bg2); color:var(--fg); border:1px solid var(--border);
+      border-radius:4px; padding:3px 6px; font-size:11px; font-family:inherit; cursor:pointer; text-align:left; }
+    .ctx-select:focus { outline:none; border-color:var(--accent-border); }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Lang switcher -->
+  <div class="lang-bar">
+    <button class="lang-btn" onclick="setLang('fr')">FR</button>
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-wrap">
+      <div class="logo-svg"><svg width="537" height="221" viewBox="0 0 537 221" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M525.65 118.125C531.4 118.125 536.025 122.7 536.025 128.325C536.025 133.9 531.375 138.525 525.65 138.525C519.775 138.525 515.2 133.9 515.2 128.325C515.2 122.7 519.775 118.125 525.65 118.125ZM525.65 136.275C530.025 136.275 533.525 132.725 533.525 128.325C533.525 123.9 530.025 120.4 525.65 120.4C521.175 120.4 517.675 123.9 517.675 128.325C517.675 132.725 521.175 136.275 525.65 136.275ZM526.25 123.55C528.675 123.55 530.05 124.725 530.05 126.575C530.05 128.125 528.95 129.225 527.025 129.45L530.125 133.025H527.7L524.825 129.475H523.9V133.025H521.875V123.55H526.25ZM526.225 125.325H523.9V127.85H526.225C527.3 127.85 527.975 127.425 527.975 126.575C527.975 125.75 527.3 125.325 526.225 125.325Z" fill="#7DC839"/>
+<path d="M247.499 147.994C257.576 147.994 266.047 154.956 268.368 164.316C268.638 165.437 269.644 166.249 270.805 166.249H296.16C297.649 166.249 298.829 164.954 298.655 163.465C295.676 137.861 273.899 118 247.499 118C221.1 118 199.322 137.861 196.344 163.465C196.17 164.954 197.35 166.249 198.839 166.249H224.194C225.355 166.249 226.341 165.437 226.631 164.316C228.952 154.956 237.423 147.994 247.499 147.994Z" fill="url(#paint0_linear_230_32606)"/>
+<path d="M247.499 190.986C237.423 190.986 228.952 184.025 226.631 174.665C226.36 173.543 225.355 172.731 224.194 172.731H198.839C197.35 172.731 196.17 174.027 196.344 175.516C199.322 201.12 221.1 220.98 247.499 220.98C273.899 220.98 295.676 201.12 298.655 175.516C298.829 174.027 297.649 172.731 296.16 172.731H270.805C269.644 172.731 268.658 173.543 268.368 174.665C266.047 184.025 257.576 190.986 247.499 190.986Z" fill="url(#paint1_linear_230_32606)"/>
+<path d="M60.4388 120.498H33.3235C31.6022 120.498 30.3838 122.2 30.964 123.824L63.8814 216.823C64.2295 217.828 65.1772 218.486 66.2409 218.486H95.2128C96.2766 218.486 97.2243 217.809 97.5724 216.823L104.999 195.821C105.579 194.197 104.361 192.495 102.64 192.495H89.5074C88.4437 192.495 87.496 191.838 87.1479 190.832L62.779 122.161C62.4308 121.156 61.4832 120.498 60.4194 120.498H60.4388Z" fill="url(#paint2_linear_230_32606)"/>
+<path d="M161.009 122.161L146.62 162.695C146.426 163.236 146.426 163.836 146.62 164.358L153.699 184.315C154.047 185.321 154.994 185.978 156.058 185.978H169.074C170.138 185.978 171.086 185.301 171.434 184.315L192.844 123.824C193.424 122.2 192.205 120.498 190.484 120.498H163.369C162.305 120.498 161.357 121.156 161.009 122.161Z" fill="url(#paint3_linear_230_32606)"/>
+<path d="M125.133 122.161C124.784 121.156 123.837 120.498 122.773 120.498H101.034C99.9707 120.498 99.0231 121.156 98.6749 122.161L84.2857 162.695C84.0923 163.236 84.0923 163.836 84.2857 164.358L91.3643 184.315C91.7124 185.321 92.6601 185.978 93.7238 185.978H106.74C107.804 185.978 108.751 185.301 109.099 184.315L109.564 183.019C110.357 180.795 113.49 180.795 114.283 183.019L126.235 216.804C126.583 217.809 127.531 218.467 128.595 218.467H157.566C158.63 218.467 159.578 217.79 159.926 216.804L167.353 195.802C167.933 194.178 166.714 192.476 164.993 192.476H151.861C150.797 192.476 149.85 191.818 149.502 190.813L125.133 122.142V122.161Z" fill="url(#paint4_linear_230_32606)"/>
+<path d="M341.455 120.498H316.448C315.07 120.498 313.953 121.615 313.953 122.993V215.991C313.953 217.369 315.07 218.486 316.448 218.486H341.455C342.833 218.486 343.95 217.369 343.95 215.991V122.993C343.95 121.615 342.833 120.498 341.455 120.498Z" fill="url(#paint5_linear_230_32606)"/>
+<path d="M398.818 214.869L380.561 178.126C380.02 177.043 380.348 175.728 381.315 175.013C388.684 169.54 393.48 160.78 393.539 150.917C393.635 134.17 379.439 120.479 362.691 120.479H353.001C351.628 120.479 350.506 121.6 350.506 122.973V140.977C350.506 142.35 351.628 143.472 353.001 143.472H356.057C359.751 143.472 363.039 146.121 363.503 149.776C364.064 154.205 360.621 157.976 356.308 157.976H353.001C351.628 157.976 350.506 159.097 350.506 160.47V180.408C350.506 180.776 350.583 181.143 350.738 181.472L367.468 217.035C367.874 217.906 368.763 218.466 369.73 218.466H396.614C398.47 218.466 399.669 216.513 398.857 214.85L398.818 214.869Z" fill="url(#paint6_linear_230_32606)"/>
+<path d="M440.498 120.498H415.491C414.113 120.498 412.996 121.615 412.996 122.993V215.991C412.996 217.369 414.113 218.486 415.491 218.486H440.498C441.876 218.486 442.993 217.369 442.993 215.991V122.993C442.993 121.615 441.876 120.498 440.498 120.498Z" fill="url(#paint7_linear_230_32606)"/>
+<path d="M478.25 164.324L498.499 123.616C499.331 121.953 498.112 120 496.256 120H469.276C468.367 120 467.516 120.503 467.071 121.315L449.8 153.204C449.607 153.572 449.491 153.978 449.491 154.403V163.26C449.491 164.633 450.612 165.755 451.986 165.755H475.948C476.915 165.755 477.805 165.194 478.25 164.324Z" fill="url(#paint8_linear_230_32606)"/>
+<path d="M501.729 214.869L481.46 174.123C481.035 173.272 480.165 172.731 479.217 172.731H453.417C451.58 172.731 450.38 174.645 451.154 176.289L470.32 217.035C470.727 217.906 471.616 218.466 472.583 218.466H499.466C501.323 218.466 502.522 216.513 501.71 214.85L501.729 214.869Z" fill="url(#paint9_linear_230_32606)"/>
+<path d="M270.805 48.2498H296.16C297.649 48.2498 298.829 46.9348 298.655 45.4457C295.889 21.8334 277.168 3.11377 253.553 0.348365C252.064 0.174319 250.749 1.33463 250.749 2.84303V28.1958C250.749 29.3561 251.542 30.3424 252.683 30.6131C260.38 32.5276 266.473 38.5999 268.387 46.316C268.658 47.4376 269.664 48.2498 270.805 48.2498Z" fill="url(#paint10_linear_230_32606)"/>
+<path d="M198.839 48.2495H224.194C225.355 48.2495 226.341 47.4567 226.612 46.3157C228.526 38.619 234.599 32.5274 242.316 30.6128C243.438 30.3421 244.25 29.3365 244.25 28.1955V2.84279C244.25 1.35373 242.935 0.17408 241.446 0.348126C217.831 3.11353 199.11 21.8332 196.344 45.4455C196.17 46.9345 197.33 48.2495 198.839 48.2495Z" fill="url(#paint11_linear_230_32606)"/>
+<path d="M224.213 54.7471H198.858C197.369 54.7471 196.189 56.0621 196.363 57.5512C199.129 81.1634 217.85 99.8831 241.465 102.649C242.954 102.823 244.27 101.662 244.27 100.154V74.8011C244.27 73.6408 243.477 72.6545 242.335 72.3838C234.638 70.4693 228.546 64.397 226.631 56.6809C226.36 55.5593 225.355 54.7471 224.213 54.7471Z" fill="url(#paint12_linear_230_32606)"/>
+<path d="M250.749 74.8011V100.154C250.749 101.643 252.064 102.823 253.553 102.648C277.168 99.8831 295.889 81.1634 298.655 57.5512C298.829 56.0621 297.669 54.7471 296.16 54.7471H270.805C269.644 54.7471 268.658 55.54 268.387 56.6809C266.473 64.3776 260.4 70.4693 252.683 72.3838C251.561 72.6545 250.749 73.6601 250.749 74.8011Z" fill="url(#paint13_linear_230_32606)"/>
+<path d="M149.502 29.994C152.731 29.994 155.806 30.7095 158.572 32.0051C159.752 32.566 161.164 32.0632 161.821 30.9415L174.315 9.3018C175.031 8.06414 174.567 6.47838 173.31 5.82088C166.192 2.10789 158.108 0 149.521 0C123.121 0 101.344 19.8606 98.3655 45.4647C98.1914 46.9538 99.3712 48.2495 100.86 48.2495H126.216C127.376 48.2495 128.362 47.4372 128.653 46.3156C130.973 36.9558 139.445 29.994 149.521 29.994H149.502Z" fill="url(#paint14_linear_230_32606)"/>
+<path d="M154.008 57.242V70.3922C154.008 71.6492 153.079 72.7321 151.842 72.8675C151.068 72.9449 150.294 72.9835 149.521 72.9835C139.444 72.9835 130.973 66.0217 128.653 56.6619C128.382 55.5402 127.376 54.728 126.216 54.728H100.86C99.3712 54.728 98.1914 56.0237 98.3655 57.5128C101.344 83.1169 123.121 102.977 149.521 102.977C162.382 102.977 174.141 98.2589 183.173 90.4655C183.715 90.0014 184.024 89.3052 184.024 88.5703V57.2227C184.024 55.8497 182.902 54.728 181.529 54.728H156.522C155.149 54.728 154.027 55.8497 154.027 57.2227L154.008 57.242Z" fill="url(#paint15_linear_230_32606)"/>
+<path d="M82.5062 2.49463H57.499C56.1258 2.49463 55.0041 3.61626 55.0041 4.98929V61.8058C55.0041 66.4083 51.8903 70.3727 47.4226 72.0745C46.4362 72.4613 45.74 73.3702 45.74 74.4338V100.096C45.74 101.604 47.0551 102.784 48.5637 102.591C69.1613 99.9606 85.0011 84.1224 85.0011 64.9773V5.00863C85.0011 3.6356 83.8793 2.51397 82.5062 2.51397V2.49463Z" fill="url(#paint16_linear_230_32606)"/>
+<path d="M39.2611 74.4533C39.2611 73.3897 38.5842 72.4808 37.5785 72.094C33.1302 70.3922 29.997 66.4278 29.997 61.8253V5.00882C29.997 3.63579 28.8753 2.51416 27.5021 2.51416H2.49492C1.12175 2.51416 0 3.63579 0 5.00882V64.9968C0 84.1419 15.8398 99.9801 36.4374 102.61C37.9266 102.804 39.2611 101.624 39.2611 100.115V74.4533Z" fill="url(#paint17_linear_230_32606)"/>
+<defs>
+<linearGradient id="paint0_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint1_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint2_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint3_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint4_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint5_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint6_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint7_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint8_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint9_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint10_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint11_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint12_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint13_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint14_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint15_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint16_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+<linearGradient id="paint17_linear_230_32606" x1="250.984" y1="220.98" x2="250.984" y2="-1.40917e-06" gradientUnits="userSpaceOnUse"><stop stop-color="#DCE614"/><stop offset="0.494792" stop-color="#7DC839"/><stop offset="1" stop-color="#00A550"/></linearGradient>
+</defs>
+</svg></div>
+    </div>
+    <h1 data-i18n="title">Calculateur de crédits carbone</h1>
+    <p class="subtitle" data-i18n="subtitle">CFR (Canada) · LCSF (États-Unis) · 2026 · Flotte mixte</p>
+  </div>
+
+  <!-- Programme + Région -->
+  <div class="top-row">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-label" data-i18n="program">Programme</div>
+      <div class="program-grid">
+        <button class="prog-btn active" data-program="CFR" onclick="setProgram('CFR')">
+          <div class="btn-title">CFR</div><div class="btn-sub">Canada</div>
+        </button>
+        <button class="prog-btn" data-program="LCSF" onclick="setProgram('LCSF')">
+          <div class="btn-title">LCSF</div><div class="btn-sub" data-i18n="usa">États-Unis</div>
+        </button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-label" data-i18n="region">Région</div>
+      <select id="regionSelect" onchange="onRegionChange()"></select>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- LEFT -->
+    <div>
+      <div class="card">
+        <div class="card-label" data-i18n="fleetComp">Composition de la flotte</div>
+
+        <div class="fleet-table-head" id="fleetHead">
+          <div data-i18n="colType">Type de chariot</div>
+          <div data-i18n="colQty">Qté</div>
+          <div id="headPedal">Avg. pedal time<br>/ year</div>
+          <div id="headKwh">Consommation<br>annuelle (kWh)</div>
+          <div id="ctxHeadCol" style="display:none"></div>
+          <div></div>
+        </div>
+
+        <div id="fleetRows">
+          <div class="empty-fleet">
+            <div class="ico"><svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.0019 28C11.5836 28 8.00189 31.5817 8.00189 36V47C8.00189 48.6569 9.34504 50 11.0019 50H11.23C11.23 46.8133 13.8133 44.23 17 44.23C20.1867 44.23 22.77 46.8133 22.77 50H30.2393C30.2393 46.8185 32.8185 44.2393 36 44.2393C39.1815 44.2393 41.7607 46.8185 41.7607 50H45.0019V34H27.7499C26.8618 30.5495 23.7296 28 20.0019 28H16.0019Z" fill="url(#paint0_linear_empty)"/>
+<path d="M42.0469 9.54346C42.0469 8.71503 42.7185 8.04346 43.5469 8.04346C44.3754 8.04346 45.0469 8.71503 45.0469 9.54346V46.9962H54.4981C55.3265 46.9962 55.9981 47.6677 55.9981 48.4962C55.9981 49.3246 55.3265 49.9962 54.4981 49.9962H42.0469V9.54346Z" fill="#ffffff"/>
+<path d="M18.5019 28V13.75H25.3557C27.6209 13.75 29.6032 15.2729 30.1868 17.4617L34.5971 34H37.7019L33.0855 16.6887C32.1517 13.1867 28.9801 10.75 25.3557 10.75H17.5019C16.3973 10.75 15.5019 11.6454 15.5019 12.75V28.0154C15.6672 28.0052 15.834 28 16.0019 28H18.5019Z" fill="#ffffff"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M17.0019 56C20.3156 56 23.0019 53.3137 23.0019 50C23.0019 46.6863 20.3156 44 17.0019 44C13.6882 44 11.0019 46.6863 11.0019 50C11.0019 53.3137 13.6882 56 17.0019 56ZM17.0019 53C18.6587 53 20.0019 51.6569 20.0019 50C20.0019 48.3431 18.6587 47 17.0019 47C15.345 47 14.0019 48.3431 14.0019 50C14.0019 51.6569 15.345 53 17.0019 53Z" fill="#ffffff"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M36.0019 56C39.3156 56 42.0019 53.3137 42.0019 50C42.0019 46.6863 39.3156 44 36.0019 44C32.6882 44 30.0019 46.6863 30.0019 50C30.0019 53.3137 32.6882 56 36.0019 56ZM36.0019 53C37.6587 53 39.0019 51.6569 39.0019 50C39.0019 48.3431 37.6587 47 36.0019 47C34.345 47 33.0019 48.3431 33.0019 50C33.0019 51.6569 34.345 53 36.0019 53Z" fill="#ffffff"/>
+<defs><linearGradient id="paint0_linear_empty" x1="26.5019" y1="28" x2="26.5019" y2="50" gradientUnits="userSpaceOnUse"><stop stop-color="#00A550"/><stop offset="0.49" stop-color="#7DC839"/><stop offset="1" stop-color="#DCE614"/></linearGradient></defs>
+</svg></div>
+            <div data-i18n="emptyFleet">Ajoutez des types de chariots ci-dessous</div>
+          </div>
+        </div>
+
+        <div class="add-row">
+          <select id="addTypeSelect"></select>
+          <button class="add-btn" onclick="addType()" data-i18n="addBtn">+ Ajouter</button>
+        </div>
+
+
+      </div>
+
+      <div class="card">
+        <div class="card-label" data-i18n="consumption">Récapitulatif de consommation</div>
+        <div id="kwhSummary" style="color:var(--muted);font-size:12px;padding:4px 0">
+          <span data-i18n="noForklift">Aucun chariot dans la flotte.</span>
+        </div>
+      </div>
+
+      <div class="warning" data-i18n="disclaimer">
+        ⚠️ Estimation indicative. Les données réelles de consommation doivent être utilisées pour la soumission officielle CFR/LCSF.
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="result-card">
+        <div class="result-tag" data-i18n="creditsTag">Crédits carbone annuels estimés</div>
+        <div class="result-number" id="creditsDisplay">0.0</div>
+        <div class="result-divider">
+          <div class="revenue-tag" data-i18n="revenueTag">Revenu brut annuel estimé</div>
+          <div class="revenue-number" id="revenueDisplay">$0 <span class="revenue-unit">CAD</span></div>
+        </div>
+        <div class="result-divider" style="margin-top:14px;padding-top:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;">
+            <div>
+              <div style="font-size:9px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px" data-i18n="yr3">3 ans</div>
+              <div style="font-family:var(--sans);font-size:1.05rem;font-weight:700;color:var(--uw-primary-subtle)" id="rev3Display">$0</div>
+            </div>
+            <div>
+              <div style="font-size:9px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px" data-i18n="yr5">5 ans</div>
+              <div style="font-family:var(--sans);font-size:1.05rem;font-weight:700;color:var(--uw-primary-subtle)" id="rev5Display">$0</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label" data-i18n="params">Paramètres</div>
+        <div class="detail-row"><span class="dl" data-i18n="program">Programme</span><span class="dv accent" id="detProgram">CFR</span></div>
+        <div class="detail-row"><span class="dl" data-i18n="region">Région</span><span class="dv" id="detRegion">—</span></div>
+        <div class="detail-row"><span class="dl" data-i18n="rateHeavy">Taux heavy / MWh</span><span class="dv accent" id="detHeavy">—</span></div>
+        <div class="detail-row"><span class="dl" data-i18n="rateLight">Taux light / MWh</span><span class="dv accent" id="detLight">—</span></div>
+        <div class="detail-row"><span class="dl" data-i18n="priceCredit">Prix / crédit</span><span class="dv" id="detPrice">—</span></div>
+        <div class="detail-row"><span class="dl" data-i18n="totalKwh">kWh total flotte</span><span class="dv" id="detKwh">—</span></div>
+
+      </div>
+
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const T = {
+  fr: {
+    title:        "Calculateur de crédits carbone",
+    subtitle:     "CFR (Canada) · LCSF (États-Unis) · 2026 · Flotte mixte",
+    program:      "Programme",
+    usa:          "États-Unis",
+    region:       "Région",
+    fleetComp:    "Composition de la flotte",
+    colType:      "Type de chariot",
+    colQty:       "Chariots",
+    colPedal:     "Avg. pedal time / year",
+    colKwh:       "kWh / an estimés",
+    emptyFleet:   "Ajoutez des types de chariots ci-dessous",
+    addBtn:       "+ Ajouter",
+    srcDb:        "Données flotte UgoWork 2024",
+    srcRef:       "Valeur de référence manuelle",
+    consumption:  "Récapitulatif de consommation",
+    noForklift:   "Aucun chariot dans la flotte.",
+    creditsTag:   "Crédits carbone annuels estimés",
+    revenueTag:   "Revenu brut annuel estimé",
+    yr3:          "3 ans",
+    yr5:          "5 ans",
+    yr7:          "7 ans",
+    params:       "Paramètres",
+    rateHeavy:    "Taux heavy / MWh",
+    rateLight:    "Taux light / MWh",
+    priceCredit:  "Prix / crédit",
+    totalKwh:     "kWh total flotte",
+    disclaimer:   "⚠️ Estimation indicative. Les données réelles de consommation doivent être utilisées pour la soumission officielle CFR/LCSF.",
+    unitHours:    "h / an",
+    unitForklifts:"chariots",
+    total:        "Total",
+    heavy:        "Heavy-duty",
+    light:        "Light-duty",
+    refFleet:     "réf. flotte",
+    chSymbol:     "ch.",
+  },
+  en: {
+    title:        "Carbon Credit Calculator",
+    subtitle:     "CFR (Canada) · LCSF (United States) · 2026 · Mixed Fleet",
+    program:      "Program",
+    usa:          "United States",
+    region:       "Region",
+    fleetComp:    "Fleet Composition",
+    colType:      "Forklift Type",
+    colQty:       "Forklifts",
+    colPedal:     "Avg. pedal time / year",
+    colKwh:       "Est. kWh / year",
+    emptyFleet:   "Add forklift types below",
+    addBtn:       "+ Add",
+    srcDb:        "UgoWork fleet data 2024",
+    srcRef:       "Manual reference value",
+    consumption:  "Consumption Summary",
+    noForklift:   "No forklifts in fleet.",
+    creditsTag:   "Estimated annual carbon credits",
+    revenueTag:   "Estimated annual gross revenue",
+    yr3:          "3 years",
+    yr5:          "5 years",
+    yr7:          "7 years",
+    params:       "Parameters",
+    rateHeavy:    "Heavy rate / MWh",
+    rateLight:    "Light rate / MWh",
+    priceCredit:  "Price / credit",
+    totalKwh:     "Total fleet kWh",
+    disclaimer:   "⚠️ Indicative estimate only. Actual consumption data must be used for official CFR/LCSF submission.",
+    unitHours:    "h / year",
+    unitForklifts:"forklifts",
+    total:        "Total",
+    heavy:        "Heavy-duty",
+    light:        "Light-duty",
+    refFleet:     "fleet ref.",
+    chSymbol:     "units",
+  }
+};
+
+let lang = "en";
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll(".lang-btn").forEach(b =>
+    b.classList.toggle("active", b.textContent === l.toUpperCase()));
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (T[l][key] !== undefined) el.textContent = T[l][key];
+  });
+  const hp = document.getElementById("headPedal");
+  if (hp) hp.innerHTML = l === "fr" ? "Avg. pedal time<br>/ an" : "Avg. pedal time<br>/ year";
+  const hk = document.getElementById("headKwh");
+  if (hk) hk.innerHTML = l === "fr" ? "Consommation<br>annuelle (kWh)" : "Annual consumption<br>(kWh)";
+  buildAddSelect();
+  renderFleet();
+  calculate();
+}
+
+function t(key) { return T[lang][key] || key; }
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const REGIONS = {
+  CFR: {
+    "Alberta":                 { light:0.6614, heavy:0.9378, price:380 },
+    "British Columbia":        { light:1.2194, heavy:1.4958, price:380 },
+    "Manitoba":                { light:1.2338, heavy:1.5102, price:380 },
+    "New Brunswick":           { light:0.9314, heavy:1.2078, price:380 },
+    "Newfoundland & Labrador": { light:1.2122, heavy:1.4886, price:380 },
+    "Nova Scotia":             { light:0.5246, heavy:0.8010, price:380 },
+    "Northwest Territories":   { light:1.0502, heavy:1.3266, price:380 },
+    "Nunavut":                 { light:0.2150, heavy:0.4914, price:380 },
+    "Ontario":                 { light:1.2158, heavy:1.4922, price:380 },
+    "Prince Edward Island":    { light:1.2554, heavy:1.5318, price:380 },
+    "Quebec":                  { light:1.2410, heavy:1.5174, price:380 },
+    "Saskatchewan":            { light:0.4742, heavy:0.7506, price:380 },
+    "Yukon":                   { light:1.1582, heavy:1.4346, price:380 },
+  },
+  // BC provincial LCSF (stacked on top of CFR when region = British Columbia)
+  BC_LCSF: { light:0.0000, heavy:1.0800, price:250 },
+
+  LCSF: {
+    "California, US":          { light:0.6927, heavy:1.0967, price:83  },
+    "Washington, US":          { light:0.3254, heavy:1.2367, price:40  },
+    "Oregon, US":              { light:0.3352, heavy:1.2736, price:234 },
+  }
+};
+
+const TYPES = [
+  { id:"counterbalanced", name:"Counterbalanced",                 duty:"heavy", kph:3.28 },
+  { id:"reach",           name:"Reach",                           duty:"heavy", kph:3.32 },
+  { id:"three_wheel",     name:"Three-wheel",                     duty:"heavy", kph:2.77 },
+  { id:"turret",          name:"Turret",                          duty:"heavy", kph:5.00 },
+  { id:"dockstocker",     name:"Dockstocker",                     duty:"heavy", kph:3.33 },
+  { id:"swing_reach",     name:"Swing reach",                     duty:"heavy", kph:4.73 },
+  { id:"order_picker",    name:"Order picker",                    duty:"heavy", kph:2.80 },
+  { id:"tugger",          name:"Tugger",                          duty:"light", kph:1.24 },
+  { id:"end_rider",       name:"End rider pallet truck",          duty:"light", kph:1.27 },
+  { id:"pallet_jack",     name:"Pallet jack",                     duty:"light", kph:1.44 },
+];
+
+// UgoWork palette for duty types
+const DUTY_CLASS = { heavy: "duty-heavy", light: "duty-light" };
+
+let program = "CFR";
+let fleet = [];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function init() {
+  buildRegionSelect();
+  buildAddSelect();
+  calculate();
+})();
+
+function resetCtxFields() {
+  // Réinitialise les champs contextuels de chaque chariot selon la nouvelle région
+  const mode = getCtxMode();
+  fleet.forEach(f => {
+    f.liftCapacity_bc = "heavy";
+    f.liftCapacity_ca = "heavy";
+    f.modelYear_wa    = "heavy";
+    f.modelYear_or    = "heavy";
+    f.modelYear_wa_yr = 2016;
+    f.modelYear_or_yr = 2023;
+  });
+}
+
+function onRegionChange() {
+  resetCtxFields();
+  renderFleet();
+  calculate();
+}
+
+function buildRegionSelect() {
+  const sel = document.getElementById("regionSelect");
+  sel.innerHTML = Object.keys(REGIONS[program]).map(a =>
+    `<option value="${a}">${a}</option>`).join("");
+  if (program === "CFR") sel.value = "Quebec";
+}
+
+function buildAddSelect() {
+  document.getElementById("addTypeSelect").innerHTML = TYPES.map(tp =>
+    `<option value="${tp.id}">${tp.name} — ${tp.kph.toFixed(2)} kWh/h</option>`
+  ).join("");
+}
+
+function setProgram(p) {
+  program = p;
+  document.querySelectorAll(".prog-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.program === p));
+  buildRegionSelect();
+  resetCtxFields();
+  renderFleet();
+  calculate();
+}
+
+function addType() {
+  const id = document.getElementById("addTypeSelect").value;
+  if (fleet.find(f => f.typeId === id)) {
+    const row = document.querySelector(`[data-rid="${id}"]`);
+    if (row) {
+      row.style.outline = "1px solid var(--accent)";
+      setTimeout(() => row.style.outline = "", 600);
+    }
+    return;
+  }
+  fleet.push({ typeId:id, qty:1, hoursPerYear:2000, liftCapacity_bc:'heavy', liftCapacity_ca:'heavy', modelYear_wa:'heavy', modelYear_or:'heavy', modelYear_wa_yr:2016, modelYear_or_yr:2023 });
+  renderFleet();
+  calculate();
+}
+
+function removeRow(id) {
+  fleet = fleet.filter(f => f.typeId !== id);
+  renderFleet();
+  calculate();
+}
+
+function update(id, field, val) {
+  const row = fleet.find(f => f.typeId === id);
+  if (!row) return;
+  row[field] = Math.max(0, parseFloat(val) || 0);
+  const el = document.getElementById("kwh_" + id);
+  if (el) el.textContent = fmtKwh(row);
+  calculate();
+}
+
+function updateCtx(id, field, val) {
+  const row = fleet.find(f => f.typeId === id);
+  if (!row) return;
+  row[field] = val;
+  renderFleet();
+  calculate();
+}
+
+function updateCtxYear(id, field, threshold, yearStr) {
+  const row = fleet.find(f => f.typeId === id);
+  if (!row) return;
+  const yr = parseInt(yearStr, 10);
+  row[field + "_yr"] = yr;
+  row[field] = yr >= threshold ? "heavy" : "light";
+  renderFleet();
+  calculate();
+}
+
+function renderFleet() {
+  const wrap = document.getElementById("fleetRows");
+  if (!fleet.length) {
+    wrap.innerHTML = `<div class="empty-fleet"><div class="ico"><svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.0019 28C11.5836 28 8.00189 31.5817 8.00189 36V47C8.00189 48.6569 9.34504 50 11.0019 50H11.23C11.23 46.8133 13.8133 44.23 17 44.23C20.1867 44.23 22.77 46.8133 22.77 50H30.2393C30.2393 46.8185 32.8185 44.2393 36 44.2393C39.1815 44.2393 41.7607 46.8185 41.7607 50H45.0019V34H27.7499C26.8618 30.5495 23.7296 28 20.0019 28H16.0019Z" fill="url(#paint0_linear_js)"/><path d="M42.0469 9.54346C42.0469 8.71503 42.7185 8.04346 43.5469 8.04346C44.3754 8.04346 45.0469 8.71503 45.0469 9.54346V46.9962H54.4981C55.3265 46.9962 55.9981 47.6677 55.9981 48.4962C55.9981 49.3246 55.3265 49.9962 54.4981 49.9962H42.0469V9.54346Z" fill="#ffffff"/><path d="M18.5019 28V13.75H25.3557C27.6209 13.75 29.6032 15.2729 30.1868 17.4617L34.5971 34H37.7019L33.0855 16.6887C32.1517 13.1867 28.9801 10.75 25.3557 10.75H17.5019C16.3973 10.75 15.5019 11.6454 15.5019 12.75V28.0154C15.6672 28.0052 15.834 28 16.0019 28H18.5019Z" fill="#ffffff"/><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0019 56C20.3156 56 23.0019 53.3137 23.0019 50C23.0019 46.6863 20.3156 44 17.0019 44C13.6882 44 11.0019 46.6863 11.0019 50C11.0019 53.3137 13.6882 56 17.0019 56ZM17.0019 53C18.6587 53 20.0019 51.6569 20.0019 50C20.0019 48.3431 18.6587 47 17.0019 47C15.345 47 14.0019 48.3431 14.0019 50C14.0019 51.6569 15.345 53 17.0019 53Z" fill="#ffffff"/><path fill-rule="evenodd" clip-rule="evenodd" d="M36.0019 56C39.3156 56 42.0019 53.3137 42.0019 50C42.0019 46.6863 39.3156 44 36.0019 44C32.6882 44 30.0019 46.6863 30.0019 50C30.0019 53.3137 32.6882 56 36.0019 56ZM36.0019 53C37.6587 53 39.0019 51.6569 39.0019 50C39.0019 48.3431 37.6587 47 36.0019 47C34.345 47 33.0019 48.3431 33.0019 50C33.0019 51.6569 34.345 53 36.0019 53Z" fill="#ffffff"/><defs><linearGradient id="paint0_linear_js" x1="26.5019" y1="28" x2="26.5019" y2="50" gradientUnits="userSpaceOnUse"><stop stop-color="#00A550"/><stop offset="0.49" stop-color="#7DC839"/><stop offset="1" stop-color="#DCE614"/></linearGradient></defs></svg></div><div>${t("emptyFleet")}</div></div>`;
+    return;
+  }
+  const ctxMode = getCtxMode();
+  wrap.innerHTML = fleet.map(f => {
+    const tp = TYPES.find(x => x.id === f.typeId);
+    const effDuty = getEffectiveDuty(f, tp);
+    const dutyClass = DUTY_CLASS[effDuty];
+    let ctxCol = "";
+    if (ctxMode === "capacity_bc") {
+      const val = f.liftCapacity_bc !== undefined ? f.liftCapacity_bc : "heavy";
+      ctxCol = `<div class="input-wrap">
+        <select class="ctx-select" onchange="updateCtx('${f.typeId}','liftCapacity_bc',this.value)">
+          <option value="heavy" ${val==="heavy"?"selected":""}>&#9650; 14 000 lbs</option>
+          <option value="light" ${val==="light"?"selected":""}>&#9660; 14 000 lbs</option>
+        </select></div>`;
+    } else if (ctxMode === "capacity") {
+      const val = f.liftCapacity_ca !== undefined ? f.liftCapacity_ca : "heavy";
+      ctxCol = `<div class="input-wrap">
+        <select class="ctx-select" onchange="updateCtx('${f.typeId}','liftCapacity_ca',this.value)">
+          <option value="heavy" ${val==="heavy"?"selected":""}>&#9650; 12 000 lbs</option>
+          <option value="light" ${val==="light"?"selected":""}>&#9660; 12 000 lbs</option>
+        </select></div>`;
+    } else if (ctxMode === "modelYear") {
+      const region = document.getElementById("regionSelect").value;
+      const isOr = region === "Oregon, US";
+      const field = isOr ? "modelYear_or" : "modelYear_wa";
+      const threshold = isOr ? 2023 : 2016;
+      const currentYear = new Date().getFullYear();
+      const savedYear = f[field+"_yr"] !== undefined ? parseInt(f[field+"_yr"]) : threshold;
+      const yearOpts = Array.from({length: currentYear - 2000 + 1}, (_, i) => currentYear - i)
+        .map(y => `<option value="${y}" ${y===savedYear?"selected":""}>${y}</option>`).join("");
+      ctxCol = `<div class="input-wrap">
+        <select class="ctx-select" onchange="updateCtxYear('${f.typeId}','${field}',${threshold},this.value)">
+          ${yearOpts}
+        </select></div>`;
+    }
+    return `
+    <div class="fleet-row${ctxCol?" ctx":""}" data-rid="${f.typeId}">
+      <div class="type-info">
+        <div class="type-name">${tp.name}</div>
+        <div class="type-duty ${dutyClass}">${t(effDuty)}</div>
+        <div class="type-ref">${tp.kph.toFixed(2)} kWh/h</div>
+      </div>
+      <div class="input-wrap">
+        <input class="fleet-input" type="number" min="0" value="${f.qty}"
+          oninput="update('${f.typeId}','qty',this.value)" />
+        <span class="input-unit">${t("unitForklifts")}</span>
+      </div>
+      <div class="input-wrap">
+        <input class="fleet-input" type="number" min="0" step="10" value="${f.hoursPerYear}"
+          oninput="update('${f.typeId}','hoursPerYear',this.value)" />
+        <span class="input-unit">${t("unitHours")}</span>
+      </div>
+      <div class="kwh-cell" id="kwh_${f.typeId}">${fmtKwh(f)}</div>
+      ${ctxCol}
+      <button class="remove-btn" onclick="removeRow('${f.typeId}')" title="Remove">✕</button>
+    </div>`;
+  }).join("");
+}
+
+// Returns which extra field is needed: null | "capacity" | "modelYear"
+function getCtxMode() {
+  const region = document.getElementById("regionSelect").value;
+  if (program === "CFR" && region === "British Columbia") return "capacity_bc";
+  if (program !== "LCSF") return null;
+  if (region === "California, US") return "capacity";
+  if (region === "Washington, US" || region === "Oregon, US") return "modelYear";
+  return null;
+}
+
+// Returns effective duty for a fleet entry, respecting program/region rules
+function getEffectiveDuty(f, tp) {
+  const mode = getCtxMode();
+  if (!mode) return tp.duty;
+  if (mode === "capacity_bc") return f.liftCapacity_bc || "heavy";
+  if (mode === "capacity")    return f.liftCapacity_ca || "heavy";
+  if (mode === "modelYear") {
+    const region = document.getElementById("regionSelect").value;
+    const isOr = region === "Oregon, US";
+    const field = isOr ? "modelYear_or" : "modelYear_wa";
+    return f[field] || "heavy";
+  }
+  return tp.duty;
+}
+
+// Effective duty for CFR component of BC (always type-based)
+function getCFRDuty(tp) {
+  return tp.duty;
+}
+
+function fmtKwh(f) {
+  const tp = TYPES.find(x => x.id === f.typeId);
+  return fmt(f.qty * f.hoursPerYear * tp.kph) + " kWh";
+}
+
+function calculate() {
+  const region = document.getElementById("regionSelect").value;
+  const d = REGIONS[program]?.[region] || {};
+  const isBcCFR = program === "CFR" && region === "British Columbia";
+  const dBC = isBcCFR ? REGIONS.BC_LCSF : null;
+  let totalKwh = 0, totalCredits = 0;
+  const items = [];
+
+  fleet.forEach(f => {
+    const tp = TYPES.find(x => x.id === f.typeId);
+    const kwh = f.qty * f.hoursPerYear * tp.kph;
+
+    let cfrRevenue = 0, lcsfRevenue = 0, credits = 0;
+
+    if (isBcCFR) {
+      // BC: CFR uses type-based duty, LCSF uses capacity-based duty
+      const cfrDuty = getCFRDuty(tp);
+      const cfrCredits = (kwh / 1000) * (d[cfrDuty] || 0);
+      cfrRevenue = cfrCredits * (d.price || 0);
+
+      const lcsfDuty = getEffectiveDuty(f, tp);
+      const lcsfCredits = (kwh / 1000) * (dBC[lcsfDuty] || 0);
+      lcsfRevenue = lcsfCredits * (dBC.price || 0);
+
+      credits = cfrCredits + lcsfCredits;
+    } else {
+      // CFR or pure LCSF: use effective duty (accounts for capacity/year rules)
+      const effDutyCalc = getEffectiveDuty(f, tp);
+      credits = (kwh / 1000) * (d[effDutyCalc] || 0);
+      cfrRevenue = credits * (d.price || 0);
+    }
+
+    const effDuty = getEffectiveDuty(f, tp);
+    totalKwh += kwh;
+    totalCredits += credits;
+    items.push({ tp, f, kwh, credits, effDuty, cfrRevenue, lcsfRevenue });
+  });
+
+  const revenue = items.reduce((s, it) => s + it.cfrRevenue + it.lcsfRevenue, 0);
+
+  anim("creditsDisplay", totalCredits, 1);
+  animRev("revenueDisplay", revenue);
+  animSimple("rev3Display", revenue * 3);
+  animSimple("rev5Display", revenue * 5);
+
+  // Update contextual column header
+  const ctxHead = document.getElementById("ctxHeadCol");
+  const fleetHead = document.getElementById("fleetHead");
+  if (ctxHead) {
+    const mode = getCtxMode();
+    if (mode === "capacity" || mode === "capacity_bc") {
+      ctxHead.style.display = ""; ctxHead.innerHTML = lang === "fr" ? "Capacité<br>de levage" : "Lifting<br>capacity";
+      fleetHead && fleetHead.classList.add("ctx");
+    } else if (mode === "modelYear") {
+      ctxHead.style.display = ""; ctxHead.innerHTML = lang === "fr" ? "Année<br>du modèle" : "Model<br>year";
+      fleetHead && fleetHead.classList.add("ctx");
+    } else {
+      ctxHead.style.display = "none"; ctxHead.textContent = "";
+      fleetHead && fleetHead.classList.remove("ctx");
+    }
+  }
+  document.getElementById("detRegion").textContent  = region || "—";
+  document.getElementById("detHeavy").textContent   = d.heavy ? d.heavy.toFixed(4) + " tCO₂e" : "—";
+  document.getElementById("detLight").textContent   = d.light ? d.light.toFixed(4) + " tCO₂e" : "—";
+  // Params display — special case for BC (CFR + LCSF stacked)
+  if (isBcCFR) {
+    document.getElementById("detProgram").textContent = "CFR + LCFS (BC)";
+    document.getElementById("detPrice").textContent = "$380 CFR · $250 LCFS";
+  } else {
+    document.getElementById("detProgram").textContent = program;
+    document.getElementById("detPrice").textContent = d.price ? "$" + d.price : "—";
+  }
+  document.getElementById("detKwh").textContent     = items.length ? fmt(totalKwh) + " kWh" : "—";
+
+
+  // kWh summary
+  const sumEl = document.getElementById("kwhSummary");
+  if (!items.length) {
+    sumEl.innerHTML = `<span style="color:var(--muted)">${t("noForklift")}</span>`;
+  } else {
+    sumEl.innerHTML = items.map(({tp, f, kwh, effDuty, cfrRevenue, lcsfRevenue}) => {
+      const lineRevenue = cfrRevenue + lcsfRevenue;
+      const revenuePerUnit = f.qty > 0 ? lineRevenue / f.qty : 0;
+      const bcBreakdown = isBcCFR && lcsfRevenue > 0 ? `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="color:var(--muted);font-size:10px">↳ CFR $${fmt(Math.round(cfrRevenue))} + LCFS $${fmt(Math.round(lcsfRevenue))}</span>
+        </div>` : "";
+      return `
+      <div class="sum-row" style="flex-direction:column;align-items:stretch;gap:3px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span class="${DUTY_CLASS[effDuty]}" style="font-weight:600">${tp.name}</span>
+          <span style="color:var(--uw-important);font-weight:700;font-size:13px">$${fmt(Math.round(lineRevenue))} CAD</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="color:var(--muted);font-size:10px">${f.qty} ${t("chSymbol")} × ${fmt(f.hoursPerYear)} ${t("unitHours")} · ${fmt(kwh)} kWh</span>
+          <span style="color:var(--muted);font-size:10px">$${fmt(Math.round(revenuePerUnit))} / ${t("chSymbol")}</span>
+        </div>
+        ${bcBreakdown}
+      </div>`;
+    }).join("") + `
+      <div class="sum-total">
+        <span style="color:var(--muted)">${t("total")}</span>
+        <span style="color:var(--accent)">${fmt(totalKwh)} kWh · ${(totalKwh/1000).toFixed(1)} MWh</span>
+      </div>`;
+  }
+
+}
+
+// ── Animation ─────────────────────────────────────────────────────────────────
+function anim(id, target, dec) {
+  const el = document.getElementById(id);
+  let cur = parseFloat(el.textContent.replace(/\s/g, "")) || 0;
+  const inc = (target - cur) / 31;
+  clearInterval(el._t);
+  el._t = setInterval(() => {
+    cur += inc;
+    const done = inc >= 0 ? cur >= target : cur <= target;
+    if (done) { cur = target; clearInterval(el._t); }
+    el.textContent = fmt(cur, dec);
+  }, 16);
+}
+
+function animRev(id, target) {
+  const el = document.getElementById(id);
+  let cur = parseFloat(el.textContent.replace(/[^0-9.]/g, "")) || 0;
+  const inc = (target - cur) / 31;
+  clearInterval(el._t);
+  el._t = setInterval(() => {
+    cur += inc;
+    const done = inc >= 0 ? cur >= target : cur <= target;
+    if (done) { cur = target; clearInterval(el._t); }
+    el.innerHTML = `$${fmt(cur, 0)} <span class="revenue-unit">CAD</span>`;
+  }, 16);
+}
+
+function animSimple(id, target) {
+  const el = document.getElementById(id);
+  let cur = parseFloat(el.textContent.replace(/[^0-9.]/g, "")) || 0;
+  const inc = (target - cur) / 31;
+  clearInterval(el._t);
+  el._t = setInterval(() => {
+    cur += inc;
+    const done = inc >= 0 ? cur >= target : cur <= target;
+    if (done) { cur = target; clearInterval(el._t); }
+    el.textContent = `$${fmt(cur, 0)}`;
+  }, 16);
+}
+
+function fmt(n, dec = 0) {
+  return (n || 0).toLocaleString(
+    lang === "fr" ? "fr-CA" : "en-CA",
+    { minimumFractionDigits: dec, maximumFractionDigits: dec }
+  );
+}
+</script>
+</body>
+</html>
